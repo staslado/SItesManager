@@ -1,0 +1,20 @@
+﻿@model string
+
+@{
+    var rows = Model?.Split('\n');
+}
+
+@if (rows != null)
+{
+    if (rows.Length == 1)
+    {
+        @rows.First()
+    }
+    else
+    {
+        foreach (var row in rows)
+        {
+            @row<br/>
+        }
+    }
+}

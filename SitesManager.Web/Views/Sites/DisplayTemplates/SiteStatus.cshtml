@@ -1,0 +1,16 @@
+﻿@using SitesManager.Common.Extensions
+@using SitesManager.Data.Models.Site
+@model SiteStatus
+
+<div>
+    <span>@Model.GetName()</span>
+    
+    @if (Model == SiteStatus.Active)
+    {
+        <span class="glyphicon glyphicon-ok-circle" aria-hidden="true"></span>
+    }
+    else
+    {
+        <span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>
+    }
+</div>
