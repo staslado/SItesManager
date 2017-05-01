@@ -2,7 +2,6 @@
 using SitesManager.Data.Models.Site;
 using SitesManager.Web.Controllers.Base;
 using SitesManager.Web.ViewModels.Site;
-using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
@@ -18,20 +17,6 @@ namespace SitesManager.Web.Controllers
         [AllowAnonymous]
         public ActionResult Index() => View(Mapper.Map<List<SiteViewModel>>(DbContext.Sites.ToList()));
 
-        // GET: Sites/Details/5
-        [AllowAnonymous]
-        public ActionResult Details(int? id)
-        {
-            if (id == null)
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-
-            var siteEntity = DbContext.Sites.Find(id);
-            if (siteEntity == null)
-                return HttpNotFound();
-
-            return View(Mapper.Map<SiteViewModel>(siteEntity));
-        }
-
         // GET: Sites/Create
         public ActionResult Create() => View();
 
@@ -42,8 +27,6 @@ namespace SitesManager.Web.Controllers
             if (ModelState.IsValid)
             {
                 var siteEntity = Mapper.Map<SiteEntity>(site);
-                siteEntity.LastModifiedTime = DateTime.Now;
-
                 DbContext.Sites.Add(siteEntity);
                 DbContext.SaveChanges();
                 return RedirectToAction("Index");
@@ -72,8 +55,6 @@ namespace SitesManager.Web.Controllers
             if (ModelState.IsValid)
             {
                 var siteEntity = Mapper.Map<SiteEntity>(site);
-                siteEntity.LastModifiedTime = DateTime.Now;
-
                 DbContext.Entry(siteEntity).State = EntityState.Modified;
                 DbContext.SaveChanges();
                 return RedirectToAction("Index");

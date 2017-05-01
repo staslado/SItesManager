@@ -1,15 +1,16 @@
-﻿using System;
+﻿using AutoMapper;
+using Microsoft.AspNet.SignalR;
+using Newtonsoft.Json;
+using SitesManager.Common.Extensions;
+using SitesManager.Data;
+using SitesManager.Web.Controllers.Hubs;
+using SitesManager.Web.ViewModels.Site;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Timers;
 using System.Web.Hosting;
-using AutoMapper;
-using Microsoft.AspNet.SignalR;
-using Newtonsoft.Json;
-using SitesManager.Data;
-using SitesManager.Web.Controllers.Hubs;
-using SitesManager.Web.ViewModels.Site;
 
 namespace SitesManager.Web.Infrastructure
 {
@@ -24,11 +25,11 @@ namespace SitesManager.Web.Infrastructure
             // Get hub context
             _hub = GlobalHost.ConnectionManager.GetHubContext<SitesHub>();
 
-            // Get timer interval from web.config. If value < 3 seconds, then set default value (15s.)
+            // Get timer interval from web.config. If value < 10 seconds, then set default value (10s.)
             if (
                 !int.TryParse(ConfigurationManager.AppSettings["SitesStatusChangedTimerInterval"], out _timerInterval) ||
-                (_timerInterval < 3000))
-                _timerInterval = 15000;
+                (_timerInterval < 10000))
+                _timerInterval = 10000;
 
             // Create and start timer
             _timer = new Timer(_timerInterval);
@@ -44,18 +45,44 @@ namespace SitesManager.Web.Infrastructure
 
         private void OnTimerElapsed(object source, ElapsedEventArgs e)
         {
-            var sites = new List<SiteViewModel>();
+            _timer.Stop();
 
-            // Получим все сайты, в которых произошли какие-либо изменения за время прошедшее с начала запуска таймера
-            using (var dbContext = new ApplicationDbContext())
+            try
             {
-                var changeDateTime = DateTime.Now.AddMilliseconds(-_timerInterval);
-                var changedSites = dbContext.Sites.Where(x => x.LastModifiedTime >= changeDateTime).ToList();
-                sites.AddRange(Mapper.Map<List<SiteViewModel>>(changedSites));
-            }
+                var sites = new List<SiteViewModel>();
+                var isNeedUpdateDb = false;
 
-            // Send info about chamged sites to all clients
-            _hub.Clients.All.sitesStatusReceived(JsonConvert.SerializeObject(sites));
+                // Получим все сайты и проверим параллельно их доступность
+                using (var dbContext = new ApplicationDbContext())
+                {
+                    var dbSites = dbContext.Sites.ToList();
+                    dbSites.AsParallel().ForAll(x =>
+                    {
+                        var status = x.Url.GetStatusCode();
+                        if (x.Status != status)
+                        {
+                            x.Status = status;
+                            sites.Add(Mapper.Map<SiteViewModel>(x));
+                            isNeedUpdateDb = true;
+                        }
+                    });
+
+                    if (isNeedUpdateDb)
+                        dbContext.SaveChanges();
+                }
+
+                // Send info about chaтged sites to all clients
+                if (sites.Any())
+                    _hub.Clients.All.sitesStatusReceived(JsonConvert.SerializeObject(sites));
+            }
+            catch (Exception ex) // TODO need logging service
+            {
+                System.Diagnostics.Debug.WriteLine(ex.Message);
+            }
+            finally
+            {
+                _timer.Start();
+            }
         }
     }
 }

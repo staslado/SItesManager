@@ -3,8 +3,6 @@
 
 @{
     ViewBag.Title = "Список сайтов";
-    var activeStatusValue = SiteStatus.Active;
-    var disableStatusValue = SiteStatus.Disable;
 }
 
 <h2>@ViewBag.Title</h2>
@@ -38,19 +36,21 @@
 
         @foreach (var item in Model)
         {
-            <tr data-id="@item.Id" data-status="@((int) item.Status)">
+            <tr data-id="@item.Id" data-status="@(item.Status.HasValue ? (int)item.Status.Value : 0)">
                 <td>
-                    @Html.ActionLink(item.Name, "Details", new {id = item.Id})
+                    <a href="@item.Url">@item.Name</a>
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.Description)
                 </td>
-                <td name="activeStatus" style="@(item.Status == activeStatusValue ? "" : "display:none")">
-                    @Html.DisplayFor(modelItem => activeStatusValue)
+                
+                <td>
+                    @item.StatusName @if (item.Status.HasValue)
+                                    {
+                                        @:(@((int)item.Status))
+                                    }
                 </td>
-                <td name="disableStatus" style="@(item.Status == disableStatusValue ? "" : "display:none")">
-                    @Html.DisplayFor(modelItem => disableStatusValue)
-                </td>
+
                 @if (Request.IsAuthenticated)
                 {
                     <td>
